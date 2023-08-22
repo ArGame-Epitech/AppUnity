@@ -41,8 +41,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SOLUTION_NAME: AppUnity
         shell: powershell
         run: |
           .\.sonar\scanner\dotnet-sonarscanner begin /k:"ArGame-Epitech_AppUnity" /o:"argame-epitech" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
-          # <insert_your_build_command>
+          msbuild /target:Rebuild ${{ env.SOLUTION_NAME }}.sln
           .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
