@@ -1,50 +1,32 @@
-name: SonarCloud Analysis
+name: SonarCloud
 on:
+  push:
+    branches:
+      - main
   pull_request:
-    types: [opened, labeled, synchronize]
-  workflow_dispatch:
+    types: [opened, synchronize, reopened]
 jobs:
   build:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'scan')
-    name: Build
+    name: Build and analyze
     runs-on: windows-latest
     steps:
-      - name: Set up JDK 11
-        uses: actions/setup-java@v1
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
         with:
-          java-version: 1.11
-      - name: Checkout repository and submodules
-        uses: actions/checkout@v2
+          java-version: 17
+          distribution: 'zulu' # Alternative distribution options are available.
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-          token: ${{ secrets.SUBMODULE_PULL }}
-          submodules: 'true'
-      - name: Check for solution file
-        id: check_files
-        uses: andstor/file-existence-action@v1
-        with:
-          files: "${{ github.workspace }}/${{ env.SOLUTION_NAME }}.sln"
-      - name: Fail build if solution file missing
-        if: steps.check_files.outputs.files_exists != 'true'
-        uses: actions/github-script@v3
-        with:
-          script: |
-            core.setFailed('Solution file is missing!')
-      - name: Setup Unity
-        uses: kuler90/setup-unity@v1
-        with:
-          project-path: ${{ github.workspace }}\${{ env.SOLUTION_NAME }}
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.0.2
       - name: Cache SonarCloud packages
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ~\sonar\cache
           key: ${{ runner.os }}-sonar
           restore-keys: ${{ runner.os }}-sonar
       - name: Cache SonarCloud scanner
         id: cache-sonar-scanner
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: .\.sonar\scanner
           key: ${{ runner.os }}-sonar-scanner
@@ -61,6 +43,6 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         shell: powershell
         run: |
-          .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ env.PROJECT_KEY }}" /o:"${{ env.ORGANIZATION }}" /d:sonar.login="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
-          msbuild /target:Rebuild ${{ env.SOLUTION_NAME }}.sln 
-          .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
+          .\.sonar\scanner\dotnet-sonarscanner begin /k:"ArGame-Epitech_AppUnity" /o:"argame-epitech" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
+          # <insert_your_build_command>
+          .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
