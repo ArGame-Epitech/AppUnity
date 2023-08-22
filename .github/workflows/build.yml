@@ -4,7 +4,6 @@ on:
     branches:
       - develop
   workflow_dispatch:
-    
 jobs:
   sonarqube-check:
     runs-on: ubuntu-latest
