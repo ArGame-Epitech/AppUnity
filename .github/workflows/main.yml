@@ -1,46 +1,61 @@
-name: Unity Build
+name: Actions 😎
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    types: [opened, synchronize, reopened]
+on: [push, pull_request]
 
 jobs:
   build:
-    name: Build for ${{ matrix.targetPlatform }}
+    name: Build my project ✨
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        targetPlatform:
-          - StandaloneWindows64
-          # Ajoutez d'autres plateformes si nécessaire, par exemple:
-          # - StandaloneLinux64
-          # - StandaloneOSX
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      # Checkout (without LFS)
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Setup Unity version
-      uses: game-ci/unity-setup@v2
-      with:
-        unity-version: 2020.3.10f1 # Remplacez par votre version d'Unity
+      # Git LFS
+      - name: Create LFS file list
+        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
 
-    - name: Build project
-      uses: game-ci/unity-builder@v2
-      with:
-        projectPath: ./ # Chemin vers votre projet Unity
-        unityVersion: 2022.3.5f1 # Remplacez par votre version d'Unity
-        targetPlatform: ${{ matrix.targetPlatform }}
-        # Si vous avez un fichier de licence, ajoutez:
-        # customImage: unityci/editor:2020.3.10f1-windows
-        # licenseFile: .github/workflows/Unity_v20XX.X.XXXX.ulf
+      - name: Restore LFS cache
+        uses: actions/cache@v3
+        id: lfs-cache
+        with:
+          path: .git/lfs
+          key: ${{ runner.os }}-lfs-${{ hashFiles('.lfs-assets-id') }}
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: Build-${{ matrix.targetPlatform }}
-        path: build/${{ matrix.targetPlatform }}
+      - name: Git LFS Pull
+        run: |
+          git lfs pull
+          git add .
+          git reset --hard
+
+      # Cache
+      - uses: actions/cache@v3
+        with:
+          path: Library
+          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-
+
+      # Test
+      - name: Run tests
+        uses: game-ci/unity-test-runner@v2
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build
+      - name: Build project
+        uses: game-ci/unity-builder@v3
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: WebGL
+
+      # Output
+      - uses: actions/upload-artifact@v3
+        with:
+          name: Build
+          path: build
