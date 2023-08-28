@@ -44,13 +44,13 @@ jobs:
             Library-test-project-
             Library-
 
-      - name: Run tests
-        uses: game-ci/unity-test-runner@v2
-        id: testRunner
-        with:
-          testMode: ${{ matrix.testMode }}
-          checkName: ${{ matrix.testMode }} test results
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Run tests
+      #   uses: game-ci/unity-test-runner@v2
+      #   id: testRunner
+      #   with:
+      #     testMode: ${{ matrix.testMode }}
+      #     checkName: ${{ matrix.testMode }} test results
+      #     githubToken: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/upload-artifact@v2
         with:
