@@ -68,6 +68,7 @@ sysinfo.txt
 *.7z
 *.zip
 *.rar
+*.tgz
 
 # Crashlytics generated file
 crashlytics-build.properties
