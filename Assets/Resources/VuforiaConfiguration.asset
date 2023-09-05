@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: VuforiaConfiguration
   m_EditorClassIdentifier: 
   vuforia:
-    vuforiaLicenseKey: 
-    ufoLicenseKey: QVhiM0Y1Ly8vLy8vQUFBQUtPbnFIeHJFSGs1N3VrMlg4U050eVBzK2pkOFZxMDhrazlwYjBsYS9aZUIxQlV1ckZWcWt0ZllSQWpnT2tIRlY2VzdOMDRTRjNYRUhmbTF5L1BnYlB4eWdHWEF6RUNheXowc3dyNVNYa2ozdERuRjhka1FpOHRscHdkMDcrcEJEY1FjTjNJcUM1bEgwOTYzQkdZdjRsQStRb0hSQU9nRGthelp5TlY0WHVwWU9EaE05NWw5bXAzbnBDMjM5MWZBWXBFdEdiL2loTDNab3N4b25ZblhjK1JtSS9wLzRoTDIwVGhmTXR6WFJNYkpUTXZLZzJoQ0N0TEJXNEptZ0pSOUtSdStzQWM3QjVNOWFFMGVHQ1dUT1VRSUUweEpiZC9ZL2cvS29iNDhBRXdQOGFwbWR5NmRWU0FHU2psVzRZY2FEU2Zud3J1ZHhucVNmSUZiajNTUnIzM0lKVlFIaW1rL0oyOGNFeDdyekcySXg=
+    vuforiaLicenseKey: Ab9gOnP/////AAABmfsittHrMUGrlq4limWm/GYvUgWIaKMrRaIe5WbeQSgm0YQv8Yq/9GoCGs/lPYbjctRWpe6Aa9vMySt0+ll8fH5OQ5nGnQyt4ZhWEE6zj7QyObMBPWPUS9GYNd1urQ4/t8NTwsl6N/isOE2b5qi5sPc3aNfort5o8diiYUG/OKVq3mt7EKBPuaByUyYa/mYtROIkcu7rJ6UV4X+IW0DpKJBLRxXUYNoz4Bcy8zLPF8jfXxKO7PwHavTYE0gLF7dtH2C1LcFRuvuSS2NjoI+j3LVF86NyV3777nu5UOgarMOr17PBmj6Ue8MU/0d++sR2AUTL+hrL4l/BbnXqLrmwVPT1dM91QivyFUYw+TX+S+j0
+    ufoLicenseKey: QVJsRE5ENy8vLy8vQUFBQUtENFRQNlo3V2t3dml4akZXOHRKejl4YkZnQjA4M0taOE96Z2FHRXpUbC9MTU5nQVN0K08xN3dGRjJqS01xc1lWOHRWd05jNnlSdUwzNWcvRDZPczVIU3hSTEFZdjR3cW54clNHUitMSmRwS3VVOTZNMzRhb2hHNERremRwRnIvNUt0ckx4eFRmaktHRjQyMWFPLzkySlFXY085VGtFTFVGZDMybk1tWThUY2piRzI0M2FqWkMrQkhiaVZWOW44a0k2U0cwQXJMeTM1MTJKa29vdWxrNXlhRTg5VHNrV2pIbytsU0MyNWFDYUdUYUh0Q3FDc1dVaDhvWlRXRklCVE8wcXo5VysyUjc3T2dxSjByNytoVWFURlpPQnptQnJvb2ZPbHRpUHY2OC8ra0NiVjJObm0zbzVWMlJNTW81RU0zNFNVWWxpa2pld2xDeDV1bWJtLzk0Ny9IdTQ3WkJQTnhCRU95UXh3Q25GRk4=
     delayedInitialization: 0
     cameraFocusModeSetting: 2
     cameraDeviceModeSetting: -1
@@ -23,8 +23,8 @@ MonoBehaviour:
     modelTargetRecoWhileExtendedTracked: 1
     shareRecordingsInITunes: 0
     logLevel: 0
-    version: 10.0.2
-    eulaAcceptedVersions: '{"Values":[""]}'
+    version: 10.17.4
+    eulaAcceptedVersions: '{"Values":["","10.17","0.0"]}'
   database:
     disableModelExtraction: 0
   shaders:
@@ -45,7 +45,7 @@ MonoBehaviour:
     thirdPartyARCoreClientDetected: 0
   playmode:
     mRecordingPath: 
-    playModeType: 0
+    playModeType: 1
   webcam:
     renderTextureLayer: 30
   packageInformation:
