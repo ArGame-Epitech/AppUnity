@@ -12,27 +12,32 @@ namespace Code.Scripts.Infrastructure
          public GameObject bluetoothPopup;
 
          // Reference to the UI text that displays the list of devices
-         public Text deviceListText;
+         public Text devicePairedListText;
+         public Text deviceAvailableListText;
 
+         private List<Dictionary<string, string>> _deviceAvailableList;
+         
          private AndroidJavaObject _bluetoothAdapter;
          private AndroidJavaObject _bluetoothManager;
          private AndroidJavaObject _bluetoothSocket;
+         private AndroidJavaObject _bluetoothReceiver;
 
          public void Start()
          {
+             _deviceAvailableList = new List<Dictionary<string, string>>();
+             
+             // Call the method to grant permissions
              _GrantPermission();
              
              // Create an instance of the Android Bluetooth Adapter
              AndroidJavaClass bluetoothAdapterClass = new AndroidJavaClass("android.bluetooth.BluetoothAdapter");
              _bluetoothAdapter = bluetoothAdapterClass.CallStatic<AndroidJavaObject>("getDefaultAdapter");
-
+             
              if (_bluetoothAdapter != null)
              {
-                 // Bluetooth is available on the device
-                 var deviceName = _bluetoothAdapter.Call<string>("getName");
-                 Debug.Log("Bluetooth is available on this device: " + deviceName);
+                 _ScanForPairedDevices();
                  
-                 _ScanForDevices();
+                 _RegisterBluetoothReceiver();
              }
              else
              {
@@ -43,8 +48,8 @@ namespace Code.Scripts.Infrastructure
 
          private static void _GrantPermission()
          {
-        #if UNITY_2020_2_OR_NEWER
-        #if UNITY_ANDROID
+            #if UNITY_2020_2_OR_NEWER
+            #if UNITY_ANDROID
              if (!Permission.HasUserAuthorizedPermission(Permission.CoarseLocation)
                  || !Permission.HasUserAuthorizedPermission(Permission.FineLocation)
                  || !Permission.HasUserAuthorizedPermission("android.permission.BLUETOOTH_SCAN")
@@ -52,6 +57,7 @@ namespace Code.Scripts.Infrastructure
                  || !Permission.HasUserAuthorizedPermission("android.permission.BLUETOOTH_CONNECT")
                  || !Permission.HasUserAuthorizedPermission("android.permission.BLUETOOTH")
                  || !Permission.HasUserAuthorizedPermission("android.permission.BLUETOOTH_ADMIN")
+                 || !Permission.HasUserAuthorizedPermission("android.permission.ACCESS_NETWORK_STATE")
                 )
                  
                  Permission.RequestUserPermissions(
@@ -63,10 +69,11 @@ namespace Code.Scripts.Infrastructure
                          "android.permission.BLUETOOTH_SCAN",
                          "android.permission.BLUETOOTH_ADVERTISE",
                          "android.permission.BLUETOOTH_CONNECT",
+                         "android.permission.ACCESS_NETWORK_STATE"
                      }
                  );
-        #endif
-        #endif
+            #endif
+            #endif
          }
 
          public void ConnectToDevice(string deviceAddress)
@@ -83,7 +90,7 @@ namespace Code.Scripts.Infrastructure
                  // Get the first UUID (you can modify this logic based on your needs)
                  AndroidJavaObject[] uuidArray = AndroidJNIHelper.ConvertFromJNIArray<AndroidJavaObject[]>(uuids.GetRawObject());
                  AndroidJavaObject firstUuid = uuidArray[0];
-                 string uuidString = firstUuid.Call<string>("toString");
+                 var uuidString = firstUuid.Call<string>("toString");
 
                  // Now, you can use the UUID string to create the socket
                  _bluetoothSocket = device.Call<AndroidJavaObject>("createRfcommSocketToServiceRecord", uuidString);
@@ -96,7 +103,7 @@ namespace Code.Scripts.Infrastructure
          }
          
          // Method to scan for available Bluetooth devices
-         private void _ScanForDevices()
+         private void _ScanForPairedDevices()
          {
              // Create List of dictionaries
             List<Dictionary<string, string>> devicesInfo = new List<Dictionary<string, string>>();
@@ -108,8 +115,8 @@ namespace Code.Scripts.Infrastructure
 
             foreach (AndroidJavaObject device in deviceArray)
             {
-                string deviceName = device.Call<string>("getName");
-                string deviceAddress = device.Call<string>("getAddress");
+                var deviceName = device.Call<string>("getName");
+                var deviceAddress = device.Call<string>("getAddress");
                 
                 // Create a dictionary with the device info
                 Dictionary<string, string> deviceInfo = new Dictionary<string, string>();
@@ -121,20 +128,117 @@ namespace Code.Scripts.Infrastructure
             }
 
             // Display the list of devices in the UI text element
-            _UpdateDeviceList(devicesInfo);
+            _UpdatePairedDeviceList(devicesInfo);
+         }
+         
+         private void _StartDiscovery()
+         {
+             var isDiscovering = _bluetoothAdapter.Call<bool>("isDiscovering");
+
+             if (!isDiscovering)
+             {
+                 _bluetoothAdapter.Call<bool>("startDiscovery");
+             }
          }
 
-         // Method to update the UI with the list of discovered devices
-         private void _UpdateDeviceList(List<Dictionary<string, string>> deviceNames)
+         private void _StopDiscovery()
          {
-             deviceListText.text = "Available Bluetooth Devices:\n";
+             var isDiscovering = _bluetoothAdapter.Call<bool>("isDiscovering");
              
-             foreach (Dictionary<string, string> deviceInfo in deviceNames)
+                if (isDiscovering)
+                {
+                    // Stop the discovery process
+                    _bluetoothAdapter.Call<bool>("cancelDiscovery");
+                }
+         }
+         
+         private void _RegisterBluetoothReceiver()
+         {
+             // Create an instance of CustomBluetoothReceiver
+             _bluetoothReceiver = new AndroidJavaObject("com.argames.bluetooth.CustomBluetoothReceiver");
+
+             // Register the receiver with the Android system
+             using (AndroidJavaObject unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
+             {
+                 using (AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
+                 {
+                     // Create IntentFilter instance
+                     var filter = new AndroidJavaObject("android.content.IntentFilter", "android.bluetooth.device.action.FOUND");
+                        
+                     // Register the receiver using the CustomBluetoothReceiver instance
+                     _bluetoothReceiver.Call("register", currentActivity, filter);
+                     
+                     // Once the receiver is registered, you can start the discovery process
+                     _ScanForAvailableDevices();
+                 }
+             }
+         }
+         
+         // Method called from CustomBluetoothReceiver plugin
+         public void HandleDeviceDiscovered(string deviceInfo)
+         {
+             var deviceInfoArray = deviceInfo.Split('|');
+             var deviceInfoDictionary = new Dictionary<string, string>();
+            
+             // Cast the device info to a dictionary
+             if (deviceInfoArray[0] != "null" && deviceInfoArray[1] != "null")
+             {
+                 deviceInfoDictionary.Add("name", deviceInfoArray[0]);
+                 deviceInfoDictionary.Add("address", deviceInfoArray[1]);
+             
+                 _UpdateAvailableDeviceList(deviceInfoDictionary);   
+             }
+         }
+
+         private void _ScanForAvailableDevices()
+         {
+             _StartDiscovery();
+
+             // Wait for 5 seconds
+             Invoke(nameof(_StopDiscovery), 5f);
+         }
+         
+         public bool GetDiscoveringStatus()
+         {
+             return _bluetoothAdapter.Call<bool>("isDiscovering");
+         }
+         
+         private void _UpdatePairedDeviceList(List<Dictionary<string, string>> deviceInfos)
+         {
+             devicePairedListText.text = "Paired Bluetooth Devices:\n";
+             
+             foreach (var deviceInfo in deviceInfos)
              { 
                  string deviceName = deviceInfo["name"]; 
                  string deviceAddress = deviceInfo["address"];
                     
-                 deviceListText.text += deviceName + " (" + deviceAddress + ")\n";
+                 devicePairedListText.text += deviceName + " (" + deviceAddress + ")\n";
+             }
+         }
+         
+         private void _UpdateAvailableDeviceList(Dictionary<string, string> deviceInfos)
+         {
+             deviceAvailableListText.text = "Available Bluetooth Devices:\n";
+
+             var isNew = true;
+             
+             foreach (var deviceInfo in _deviceAvailableList)
+             { 
+                 string deviceName = deviceInfo["name"]; 
+                 string deviceAddress = deviceInfo["address"];
+
+                 if (deviceAddress == deviceInfos["address"])
+                 {
+                     isNew = false;
+                 }
+                 
+                 deviceAvailableListText.text += deviceName + " (" + deviceAddress + ")\n";
+             }
+             
+             if (isNew)
+             {
+                 _deviceAvailableList.Add(deviceInfos);
+                 deviceAvailableListText.text += deviceInfos["name"] + " (" + deviceInfos["address"] + ")\n";
              }
          }
 
@@ -143,6 +247,15 @@ namespace Code.Scripts.Infrastructure
          {
              // Hide the pop-up dialog
              bluetoothPopup.SetActive(false);
+         }
+         
+         private void OnApplicationQuit()
+         {
+             // Close the Bluetooth socket
+             if (_bluetoothSocket != null)
+             {
+                 _bluetoothSocket.Call("close");
+             }
          }
     }
 
