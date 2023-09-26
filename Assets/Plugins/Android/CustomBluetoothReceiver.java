@@ -7,20 +7,12 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.util.Log;
 
 public class CustomBluetoothReceiver extends BroadcastReceiver {
-
-    public CustomBluetoothReceiver() {
-        super();
-        Log.d("CustomBluetoothReceiver", "Created");
-    }
 
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
-
-        Log.d("CustomBluetoothReceiver", "Received action: " + action);        
 
         if (BluetoothDevice.ACTION_FOUND.equals(action)) {
             BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
