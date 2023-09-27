@@ -17,6 +17,7 @@ namespace Code.Scripts.Infrastructure
          private AndroidJavaObject _bluetoothAdapter;
          private AndroidJavaObject _bluetoothSocket;
          private AndroidJavaObject _bluetoothReceiver;
+         private AndroidJavaObject _bluetoothGatt;
          
          public BluetoothDevicesPopup bluetoothDevicesPopup;
 
@@ -131,44 +132,24 @@ namespace Code.Scripts.Infrastructure
                  }
              }
          }
-
+         
          public void ConnectToDevice(string deviceAddress)
          {
-             try
+             // Get the Bluetooth device by its address
+             var device = _bluetoothAdapter.Call<AndroidJavaObject>("getRemoteDevice", deviceAddress);
+                 
+             // Create a BluetoothGattCallback instance (check the CustomBluetoothGattCallback class)
+             var gattCallback = new AndroidJavaObject("com.argames.bluetooth.CustomBluetoothGattCallback");
+                 
+             // Get current context
+             using (AndroidJavaObject unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
              {
-                 // Get the Bluetooth device by its address
-                 var device = _bluetoothAdapter.Call<AndroidJavaObject>("getRemoteDevice", deviceAddress);
-             
-                 // Get the UUIDs associated with the device
-                 var uuids = device.Call<AndroidJavaObject>("getUuids");
-         
-                 // Check if UUIDs are available
-                 if (uuids != null)
+                 using (AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
                  {
-                     // Get the first UUID (you can modify this logic based on your needs)
-                     var uuidArray = AndroidJNIHelper.ConvertFromJNIArray<AndroidJavaObject[]>(uuids.GetRawObject());
-                     var firstUuid = uuidArray[0];
-                     var uuidString = firstUuid.Call<string>("toString");
-                     
-                     // Convert uuidString to java.util.UUID
-                     var uuid = new AndroidJavaClass("java.util.UUID").CallStatic<AndroidJavaObject>("fromString", uuidString);
-
-                     Debug.Log($"UUID String: {uuidString}");
-                     Debug.Log($"UUID: {uuid}");
-                     
-                     // Now, you can use the UUID string to create the socket
-                     _bluetoothSocket = device.Call<AndroidJavaObject>("createRfcommSocketToServiceRecord", uuid);
-                     _bluetoothSocket.Call("connect");
+                     // Connect to the device through the BluetoothGattCallback instance
+                     _bluetoothGatt = device.Call<AndroidJavaObject>("connectGatt", currentActivity, false, gattCallback);
                  }
-                 else
-                 {
-                     Debug.LogError("UUIDs not available for the device.");
-                 }    
-             } catch (NullReferenceException)
-             {
-                 Debug.LogError($"Device with address {deviceAddress} not found.");
              }
-             
          }
          
          // Method to scan for available Bluetooth devices
