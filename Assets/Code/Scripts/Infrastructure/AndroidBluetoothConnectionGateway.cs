@@ -49,6 +49,9 @@ namespace Code.Scripts.Infrastructure
              
              if (_bluetoothAdapter != null)
              {
+                 // Enable _bluetoothAdapter
+                 _bluetoothAdapter.Call<bool>("enable");
+                 
                  _ScanForPairedDevices();
                  
                  _RegisterBluetoothReceiver();
@@ -146,9 +149,15 @@ namespace Code.Scripts.Infrastructure
                      var uuidArray = AndroidJNIHelper.ConvertFromJNIArray<AndroidJavaObject[]>(uuids.GetRawObject());
                      var firstUuid = uuidArray[0];
                      var uuidString = firstUuid.Call<string>("toString");
+                     
+                     // Convert uuidString to java.util.UUID
+                     var uuid = new AndroidJavaClass("java.util.UUID").CallStatic<AndroidJavaObject>("fromString", uuidString);
 
+                     Debug.Log($"UUID String: {uuidString}");
+                     Debug.Log($"UUID: {uuid}");
+                     
                      // Now, you can use the UUID string to create the socket
-                     _bluetoothSocket = device.Call<AndroidJavaObject>("createRfcommSocketToServiceRecord", uuidString);
+                     _bluetoothSocket = device.Call<AndroidJavaObject>("createRfcommSocketToServiceRecord", uuid);
                      _bluetoothSocket.Call("connect");
                  }
                  else
