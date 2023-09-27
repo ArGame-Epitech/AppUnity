@@ -1,21 +1,19 @@
-using System;
 using UnityEngine;
 using System.Collections.Generic;
+using Code.Scripts.Domain;
 using Code.Scripts.View;
 using UnityEngine.Android;
 
 namespace Code.Scripts.Infrastructure
 {
-    public class AndroidBluetoothConnectionGateway : MonoBehaviour
-    //IBluetoothConnectionGateway
+    public class AndroidBluetoothConnectionGateway : MonoBehaviour, IBluetoothConnectionGateway
      {
          // Singleton instance for easy access
          public static AndroidBluetoothConnectionGateway Instance { get; private set; }
          
-         public List<BluetoothDeviceData> ListDevices { get; private set; } = new List<BluetoothDeviceData>();
+         public List<BluetoothDeviceData> ListDevices { get; } = new List<BluetoothDeviceData>();
          
          private AndroidJavaObject _bluetoothAdapter;
-         private AndroidJavaObject _bluetoothSocket;
          private AndroidJavaObject _bluetoothReceiver;
          private AndroidJavaObject _bluetoothGatt;
          
@@ -30,7 +28,7 @@ namespace Code.Scripts.Infrastructure
                  DontDestroyOnLoad(gameObject);
                  
                  // Set the gateway
-                 _SetGateway();
+                 SetGateway();
              }
              else
              {
@@ -39,13 +37,17 @@ namespace Code.Scripts.Infrastructure
              }
          }
 
-         private void _SetGateway()
+         /// <summary>
+         /// Sets the gateway. It is called when the gateway is created. It gets the permissions, creates the
+         /// bluetooth adapter and registers the bluetooth receiver before starting the discovery process.
+         /// </summary>
+         public void SetGateway()
          {
              // Call the method to grant permissions
              _GrantPermission();
              
              // Create an instance of the Android Bluetooth Adapter
-             AndroidJavaClass bluetoothAdapterClass = new AndroidJavaClass("android.bluetooth.BluetoothAdapter");
+             var bluetoothAdapterClass = new AndroidJavaClass("android.bluetooth.BluetoothAdapter");
              _bluetoothAdapter = bluetoothAdapterClass.CallStatic<AndroidJavaObject>("getDefaultAdapter");
              
              if (_bluetoothAdapter != null)
@@ -53,7 +55,7 @@ namespace Code.Scripts.Infrastructure
                  // Enable _bluetoothAdapter
                  _bluetoothAdapter.Call<bool>("enable");
                  
-                 _ScanForPairedDevices();
+                 ScanForPairedDevices();
                  
                  _RegisterBluetoothReceiver();
              }
@@ -64,6 +66,10 @@ namespace Code.Scripts.Infrastructure
              }
          }
 
+         /// <summary>
+         /// Grants permissions to the application. It is called when the gateway is set.
+         /// The permissions are granted with the Android API "Permission.RequestUserPermissions".
+         /// </summary>
          private static void _GrantPermission()
          {
             #if UNITY_2020_2_OR_NEWER
@@ -94,6 +100,11 @@ namespace Code.Scripts.Infrastructure
             #endif
          }
          
+         /// <summary>
+         /// Registers the Bluetooth receiver. It is called when the gateway is set. The registration is specific since
+         /// we pass an intent filter to the receiver. The intent filter is used to filter the devices found by the
+         /// receiver.
+         /// </summary>
          private void _RegisterBluetoothReceiver()
          {
              // Create an instance of CustomBluetoothReceiver
@@ -111,11 +122,14 @@ namespace Code.Scripts.Infrastructure
                      _bluetoothReceiver.Call("register", currentActivity, filter);
                      
                      // Once the receiver is registered, you can start the discovery process
-                     _ScanForAvailableDevices();
+                     ScanForAvailableDevices();
                  }
              }
          }
          
+         /// <summary>
+         /// Unregisters the Bluetooth receiver. It is called when the gateway is killed.
+         /// </summary>
          private void _UnregisterBluetoothReceiver()
          {
              // Unregister the receiver
@@ -133,6 +147,12 @@ namespace Code.Scripts.Infrastructure
              }
          }
          
+         /// <summary>
+         /// Connects to a device through its address. It plugs a gatt callback to the device. The GattCallback
+         /// is defined in the CustomBluetoothGattCallback class. The connection is made with the "connectGatt"
+         /// method of the Android BluetoothDevice class.
+         /// </summary>
+         /// <param name="deviceAddress"></param>
          public void ConnectToDevice(string deviceAddress)
          {
              // Get the Bluetooth device by its address
@@ -152,8 +172,11 @@ namespace Code.Scripts.Infrastructure
              }
          }
          
-         // Method to scan for available Bluetooth devices
-         private void _ScanForPairedDevices()
+         /// <summary>
+         /// Scans for paired devices (stored in the device). It fills the ListDevices with the devices found
+         /// with the Android method "getBondedDevices".
+         /// </summary>
+         public void ScanForPairedDevices()
          {
             // Use the Android Bluetooth API to discover devices
             var devices = _bluetoothAdapter.Call<AndroidJavaObject>("getBondedDevices");
@@ -176,6 +199,9 @@ namespace Code.Scripts.Infrastructure
             bluetoothDevicesPopup.DisplayDevices();
          }
          
+         /// <summary>
+         /// Starts the discovery process if it is not already running.
+         /// </summary>
          private void _StartDiscovery()
          {
              var isDiscovering = _bluetoothAdapter.Call<bool>("isDiscovering");
@@ -186,6 +212,9 @@ namespace Code.Scripts.Infrastructure
              }
          }
 
+         /// <summary>
+         /// Stops the discovery process if it is running.
+         /// </summary>
          private void _StopDiscovery()
          {
              var isDiscovering = _bluetoothAdapter.Call<bool>("isDiscovering");
@@ -197,7 +226,12 @@ namespace Code.Scripts.Infrastructure
                 }
          }
          
-         // Method called from CustomBluetoothReceiver plugin
+         /// <summary>
+         /// Handles the discovery of a Bluetooth device. In the Android implementation,
+         /// the method is called by the CustomBluetoothReceiver which sends the device info
+         /// with a string containing the device name and address separated by a pipe.
+         /// </summary>
+         /// <param name="deviceInfo">Device info (name and address)</param>
          public void HandleDeviceDiscovered(string deviceInfo)
          {
              var deviceInfoArray = deviceInfo.Split('|');
@@ -221,21 +255,38 @@ namespace Code.Scripts.Infrastructure
              bluetoothDevicesPopup.DisplayDevices();
          }
 
-         private void _ScanForAvailableDevices()
+         /// <summary>
+         /// Scan for available devices (not paired, but in range).
+         /// It starts the discovery process and stops it after 5 seconds.
+         /// </summary>
+         public void ScanForAvailableDevices()
          {
              _StartDiscovery();
 
              // Wait for 5 seconds
              Invoke(nameof(_StopDiscovery), 5f);
          }
-         
-         private void OnApplicationQuit()
+
+         /// <summary>
+         /// Kills the gateway by closing the gatt connection and unregistering the bluetooth receiver.
+         /// </summary>
+         public void KillGateway()
          {
-             // Close the Bluetooth socket
-             _bluetoothSocket?.Call("close");
+             // Close the Bluetooth GATT
+             _bluetoothGatt?.Call("close");
              
              // Unregister the receiver
              _UnregisterBluetoothReceiver();
+         }
+         
+         private void OnApplicationQuit()
+         {
+             KillGateway();
+         }
+         
+         private void OnDestroy()
+         {
+             KillGateway();
          }
     }
 
