@@ -1,6 +1,4 @@
-﻿using UnityEngine;
-
-namespace Code.Scripts
+﻿namespace Code.Scripts
 {
     public class BluetoothDeviceData
     {

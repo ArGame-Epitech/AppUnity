@@ -1,9 +1,6 @@
-﻿using System;
-using System.Linq;
-using Code.Scripts.Infrastructure;
+﻿using Code.Scripts.Infrastructure;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace Code.Scripts.View
 {
@@ -26,27 +23,77 @@ namespace Code.Scripts.View
         public void Start()
         {
             // If there is no text inside paired devices panel, add a text to the panel
-            if (pairedDevices.transform.childCount == 0)
+            if (!pairedDevices.transform.Find("TPairedDevices"))
             {
-                _CreateBluetoothPopupTitle(pairedDevices, "Paired devices", TextAlignmentOptions.Left, 20);
+                _CreateBluetoothPopupTitle(pairedDevices, "TPairedDevices", "Paired devices", 
+                    additionalHeight: 20, setAsFirstSibling: true);
             }
             
             // If there is no text inside available devices panel, add a text to the panel
-            if (availableDevices.transform.childCount == 0)
+            if (!availableDevices.transform.Find("TPairedDevices"))
             {
-                _CreateBluetoothPopupTitle(availableDevices, "Available devices", TextAlignmentOptions.Left, 20);
+                _CreateBluetoothPopupTitle(availableDevices, "TAvailableDevices", "Available devices",
+                    additionalHeight: 20, setAsFirstSibling: true);
+            }
+            
+            _SetPanelStatus();
+        }
+
+        private void _SetPanelStatus()
+        {
+            // If there are no paired devices, add a text to the panel
+            if (Gateway.ListDevices.TrueForAll(device => !device.IsPaired)
+                && !pairedDevices.transform.Find("TNoPairedDevices"))
+            {
+                _CreateBluetoothPopupTitle(pairedDevices, "TNoPairedDevices","No paired devices", 
+                    TextAlignmentOptions.Center, 20);
+            }
+            else
+            {
+                // Remove the text "No paired devices" from the panel
+                _DestroyBluetoothPopupTitle(pairedDevices, "TNoPairedDevices");
+            }
+            
+            // If there are no available devices, add a text to the panel
+            if (Gateway.ListDevices.TrueForAll(device => device.IsPaired)
+                && !availableDevices.transform.Find("TNoAvailableDevices"))
+            {
+                _CreateBluetoothPopupTitle(availableDevices, "TNoAvailableDevices", "No available devices", 
+                    TextAlignmentOptions.Center, 20);
+            }
+            else
+            {
+                // Remove the text "No available devices" from the panel
+                _DestroyBluetoothPopupTitle(availableDevices, "TNoAvailableDevices");
             }
         }
 
-        private void _CreateBluetoothPopupTitle(GameObject panel, string title, 
-            TextAlignmentOptions alignment = TextAlignmentOptions.Left, float additionalHeight = 0)
-        {
+        private void _CreateBluetoothPopupTitle(GameObject panel, string label, string title, 
+            TextAlignmentOptions alignment = TextAlignmentOptions.Left, float additionalHeight = 0, 
+            bool setAsFirstSibling = false)
+        {            
             var text = Instantiate(bluetoothPopupTitle, panel.transform);
+            if (setAsFirstSibling) text.transform.SetAsFirstSibling();
+            
+            text.GetComponentInChildren<TextMeshProUGUI>().name = label;
             text.GetComponentInChildren<TextMeshProUGUI>().text = title;
             text.GetComponentInChildren<TextMeshProUGUI>().alignment = alignment;
             
             var vector = new Vector2(0, _GetButtonPrefabHeight() + additionalHeight);
             availableDevices.GetComponent<RectTransform>().sizeDelta += vector;
+        }
+        
+        private void _DestroyBluetoothPopupTitle(GameObject panel, string label)
+        {
+            var text = panel.transform.Find(label);
+            if (text != null)
+            {
+                Destroy(text.gameObject);
+                
+                // Reduce panel height
+                var vector = new Vector2(0, -_GetButtonPrefabHeight());
+                panel.GetComponent<RectTransform>().sizeDelta += vector;
+            }
         }
 
         private void _CreateBluetoothDeviceButton(BluetoothDeviceData device)
@@ -54,6 +101,9 @@ namespace Code.Scripts.View
             var panel = device.IsPaired ? pairedDevices : availableDevices;
             
             var button = Instantiate(bluetoothDeviceButtonPrefab, panel.transform);
+            
+            // Set button name to the address of the device
+            button.name = device.Address;
             
             // Get BluetoothDeviceComponent component on the button
             var bluetoothDeviceComponent = button.GetComponent<BluetoothDeviceComponent>();
@@ -72,20 +122,12 @@ namespace Code.Scripts.View
         {
             foreach (var device in Gateway.ListDevices)
             {
-                _CreateBluetoothDeviceButton(device);
+                // If there is no button with the name holding the address the device, create a button
+                if (!pairedDevices.transform.Find(device.Address) && !availableDevices.transform.Find(device.Address))
+                    _CreateBluetoothDeviceButton(device);
             }
             
-            // If there are no paired devices, add a text to the panel
-            if (Gateway.ListDevices.TrueForAll(device => !device.IsPaired))
-            {
-                _CreateBluetoothPopupTitle(pairedDevices, "No paired devices", TextAlignmentOptions.Center, 20);
-            }
-            
-            // If there are no available devices, add a text to the panel
-            if (Gateway.ListDevices.TrueForAll(device => device.IsPaired))
-            {
-                _CreateBluetoothPopupTitle(availableDevices, "No available devices", TextAlignmentOptions.Center, 20);
-            }
+            _SetPanelStatus();
         }
     }
 }

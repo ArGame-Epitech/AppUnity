@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Code.Scripts.Infrastructure;
+using UnityEngine;
 
 namespace Code.Scripts
 {
@@ -6,11 +7,17 @@ namespace Code.Scripts
     {
 
         public BluetoothDeviceData BluetoothDeviceData;
+        
+        private static AndroidBluetoothConnectionGateway Gateway => AndroidBluetoothConnectionGateway.Instance;
 
-        BluetoothDeviceComponent()
+        public void Start()
         {
-            BluetoothDeviceData = new BluetoothDeviceData();
+            GetComponent<UnityEngine.UI.Button>().onClick.AddListener(_OnDeviceButtonClicked);
         }
         
+        private void _OnDeviceButtonClicked()
+        {
+            Gateway.ConnectToDevice(BluetoothDeviceData.Address);
+        }
     }
 }

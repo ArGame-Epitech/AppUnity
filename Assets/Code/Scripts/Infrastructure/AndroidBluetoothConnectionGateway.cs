@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using System.Collections.Generic;
 using Code.Scripts.View;
@@ -11,7 +12,7 @@ namespace Code.Scripts.Infrastructure
          // Singleton instance for easy access
          public static AndroidBluetoothConnectionGateway Instance { get; private set; }
          
-         public List<BluetoothDeviceData> ListDevices { get; private set; }
+         public List<BluetoothDeviceData> ListDevices { get; private set; } = new List<BluetoothDeviceData>();
          
          private AndroidJavaObject _bluetoothAdapter;
          private AndroidJavaObject _bluetoothSocket;
@@ -19,25 +20,6 @@ namespace Code.Scripts.Infrastructure
          
          public BluetoothDevicesPopup bluetoothDevicesPopup;
 
-         public void Start()
-         {
-             ListDevices = new List<BluetoothDeviceData>();
-             
-             // Add random devices
-             for (var i = 0; i < 5; i++)
-             {
-                 var bluetoothDeviceData = new BluetoothDeviceData("Device " + i, "Address " + i, true);
-                 ListDevices.Add(bluetoothDeviceData);
-                 
-                 bluetoothDeviceData = new BluetoothDeviceData("Device " + i, "Address " + i, false);
-                 ListDevices.Add(bluetoothDeviceData);
-             }
-             
-             // Display the paired devices
-             bluetoothDevicesPopup.DisplayDevices();
-         }
-
-         
          private void Awake()
          {
              // Ensure only one instance exists
@@ -149,38 +131,40 @@ namespace Code.Scripts.Infrastructure
 
          public void ConnectToDevice(string deviceAddress)
          {
-             Debug.Log("Connecting to device: " + deviceAddress);
+             try
+             {
+                 // Get the Bluetooth device by its address
+                 var device = _bluetoothAdapter.Call<AndroidJavaObject>("getRemoteDevice", deviceAddress);
              
-             // Get the Bluetooth device by its address
-             AndroidJavaObject device = _bluetoothAdapter.Call<AndroidJavaObject>("getRemoteDevice", deviceAddress);
-             
-             // Get the UUIDs associated with the device
-             AndroidJavaObject uuids = device.Call<AndroidJavaObject>("getUuids");
+                 // Get the UUIDs associated with the device
+                 var uuids = device.Call<AndroidJavaObject>("getUuids");
          
-             // Check if UUIDs are available
-             if (uuids != null)
-             {
-                 // Get the first UUID (you can modify this logic based on your needs)
-                 AndroidJavaObject[] uuidArray = AndroidJNIHelper.ConvertFromJNIArray<AndroidJavaObject[]>(uuids.GetRawObject());
-                 AndroidJavaObject firstUuid = uuidArray[0];
-                 var uuidString = firstUuid.Call<string>("toString");
+                 // Check if UUIDs are available
+                 if (uuids != null)
+                 {
+                     // Get the first UUID (you can modify this logic based on your needs)
+                     var uuidArray = AndroidJNIHelper.ConvertFromJNIArray<AndroidJavaObject[]>(uuids.GetRawObject());
+                     var firstUuid = uuidArray[0];
+                     var uuidString = firstUuid.Call<string>("toString");
 
-                 // Now, you can use the UUID string to create the socket
-                 _bluetoothSocket = device.Call<AndroidJavaObject>("createRfcommSocketToServiceRecord", uuidString);
-                 _bluetoothSocket.Call("connect");
-             }
-             else
+                     // Now, you can use the UUID string to create the socket
+                     _bluetoothSocket = device.Call<AndroidJavaObject>("createRfcommSocketToServiceRecord", uuidString);
+                     _bluetoothSocket.Call("connect");
+                 }
+                 else
+                 {
+                     Debug.LogError("UUIDs not available for the device.");
+                 }    
+             } catch (NullReferenceException)
              {
-                 Debug.LogError("UUIDs not available for the device.");
+                 Debug.LogError($"Device with address {deviceAddress} not found.");
              }
+             
          }
          
          // Method to scan for available Bluetooth devices
          private void _ScanForPairedDevices()
          {
-             // Create List of dictionaries
-            ListDevices = new List<BluetoothDeviceData>();
-            
             // Use the Android Bluetooth API to discover devices
             var devices = _bluetoothAdapter.Call<AndroidJavaObject>("getBondedDevices");
 
@@ -249,8 +233,6 @@ namespace Code.Scripts.Infrastructure
 
          private void _ScanForAvailableDevices()
          {
-             ListDevices = new List<BluetoothDeviceData>();
-             
              _StartDiscovery();
 
              // Wait for 5 seconds
