@@ -5,7 +5,13 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/SamplesResources/Scenes/0-Main.unity
     guid: a09cb257d566c489595b16ab37547666
+  - enabled: 0
+    path: Assets/Scenes/TestScene.unity
+    guid: 65a0bee999f8c5849a816486a7c4974a
+  - enabled: 1
+    path: Assets/Scenes/BluetoothDevicePicker.unity
+    guid: f492e9c70e306e8438ee61e3a99991e3
   m_configObjects: {}
