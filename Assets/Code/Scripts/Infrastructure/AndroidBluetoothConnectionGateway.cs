@@ -116,10 +116,14 @@ namespace Code.Scripts.Infrastructure
                  using (AndroidJavaObject currentActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity"))
                  {
                      // Create IntentFilter instance
-                     var filter = new AndroidJavaObject("android.content.IntentFilter", "android.bluetooth.device.action.FOUND");
+                     var foundFilter = new AndroidJavaObject("android.content.IntentFilter", "android.bluetooth.device.action.FOUND");
+                     var bondStateChangedFilter = new AndroidJavaObject("android.content.IntentFilter", "android.bluetooth.device.action.BOND_STATE_CHANGED");
                         
-                     // Register the receiver using the CustomBluetoothReceiver instance
-                     _bluetoothReceiver.Call("register", currentActivity, filter);
+                     // Register the receiver using the CustomBluetoothReceiver instance and the FOUND filter
+                     _bluetoothReceiver.Call("register", currentActivity, foundFilter);
+                     
+                     // Register the receiver using the CustomBluetoothReceiver instance and the BOND_STATE_CHANGED filter
+                     _bluetoothReceiver.Call("register", currentActivity, bondStateChangedFilter);
                      
                      // Once the receiver is registered, you can start the discovery process
                      ScanForAvailableDevices();
@@ -152,7 +156,7 @@ namespace Code.Scripts.Infrastructure
          /// is defined in the CustomBluetoothGattCallback class. The connection is made with the "connectGatt"
          /// method of the Android BluetoothDevice class.
          /// </summary>
-         /// <param name="deviceAddress"></param>
+         /// <param name="deviceAddress">Address of the device to connect with</param>
          public void ConnectToDevice(string deviceAddress)
          {
              // Get the Bluetooth device by its address
@@ -170,6 +174,22 @@ namespace Code.Scripts.Infrastructure
                      _bluetoothGatt = device.Call<AndroidJavaObject>("connectGatt", currentActivity, false, gattCallback);
                  }
              }
+         }
+         
+         /// <summary>
+         /// Pair to a device through its address. It retrieves the device by its address and calls the
+         /// "createBond" method of the Android BluetoothDevice class. It will ask the user to pair with
+         /// the device. When the pairing is done, the CustomBluetoothReceiver will catch the event and
+         /// send the device info to the HandleDeviceBonded method.
+         /// </summary>
+         /// <param name="deviceAddress">Address of the device to pair with</param>
+         public void PairToDevice(string deviceAddress)
+         {
+             // Get the Bluetooth device by its address
+             var device = _bluetoothAdapter.Call<AndroidJavaObject>("getRemoteDevice", deviceAddress);
+             
+             // Pair the device
+             device.Call<bool>("createBond");
          }
          
          /// <summary>
@@ -231,7 +251,7 @@ namespace Code.Scripts.Infrastructure
          /// the method is called by the CustomBluetoothReceiver which sends the device info
          /// with a string containing the device name and address separated by a pipe.
          /// </summary>
-         /// <param name="deviceInfo">Device info (name and address)</param>
+         /// <param name="deviceInfo">Information about the discovered device split by a pipe.</param>
          public void HandleDeviceDiscovered(string deviceInfo)
          {
              var deviceInfoArray = deviceInfo.Split('|');
@@ -253,6 +273,39 @@ namespace Code.Scripts.Infrastructure
              
              // Display the paired devices
              bluetoothDevicesPopup.DisplayDevices();
+         }
+
+         /// <summary>
+         /// Handles the pairing to a device. It changes the IsPaired value of the device in the ListDevices.
+         /// </summary>
+         /// <param name="deviceInfo">Information about the discovered device split by a pipe.</param>
+         public void HandleDeviceBonded(string deviceInfo)
+         {
+             var deviceInfoArray = deviceInfo.Split('|');
+             var deviceInfoDictionary = new BluetoothDeviceData();
+            
+             // Cast the device info to a dictionary
+             if (deviceInfoArray[0] == "null" || deviceInfoArray[1] == "null")
+             {
+                 return;
+             }
+             
+             deviceInfoDictionary.Address = deviceInfoArray[1];
+             
+             // Replace BluetoothDeviceData IsPaired value
+             foreach (var deviceData in ListDevices)
+             {
+                 if (deviceData.Address == deviceInfoDictionary.Address)
+                 {
+                     deviceData.IsPaired = true;
+                 }
+             }
+             
+             // Display the devices again
+             bluetoothDevicesPopup.DisplayDevices();
+             
+             // Connect to the device
+             ConnectToDevice(deviceInfoDictionary.Address);
          }
 
          /// <summary>

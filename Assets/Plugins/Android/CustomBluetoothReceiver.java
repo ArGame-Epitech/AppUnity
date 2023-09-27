@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.util.Log;
 
 public class CustomBluetoothReceiver extends BroadcastReceiver {
 
@@ -20,6 +21,17 @@ public class CustomBluetoothReceiver extends BroadcastReceiver {
             String deviceAddress = device.getAddress();
             
             UnityPlayer.UnitySendMessage("AndroidBluetoothConnectionGateway", "HandleDeviceDiscovered", deviceName + "|" + deviceAddress);   
+        } else if (BluetoothDevice.ACTION_BOND_STATE_CHANGED.equals(action)) {
+            // Handle bond state change (pairing accepted)
+            BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+            int bondState = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.BOND_NONE);
+            
+            if (bondState == BluetoothDevice.BOND_BONDED) {
+                // The device has been successfully paired
+                String deviceName = device.getName();
+                String deviceAddress = device.getAddress();
+                UnityPlayer.UnitySendMessage("AndroidBluetoothConnectionGateway", "HandleDeviceBonded", deviceName + "|" + deviceAddress);
+            }
         }
     }
     

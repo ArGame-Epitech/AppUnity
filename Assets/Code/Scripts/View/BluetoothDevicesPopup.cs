@@ -95,6 +95,19 @@ namespace Code.Scripts.View
                 panel.GetComponent<RectTransform>().sizeDelta += vector;
             }
         }
+        
+        private void _DestroyBluetoothDeviceButton(GameObject panel, string address)
+        {
+            var button = panel.transform.Find(address);
+            if (button != null)
+            {
+                Destroy(button.gameObject);
+                
+                // Reduce panel height
+                var vector = new Vector2(0, -_GetButtonPrefabHeight());
+                panel.GetComponent<RectTransform>().sizeDelta += vector;
+            }
+        }
 
         private void _CreateBluetoothDeviceButton(BluetoothDeviceData device)
         {
@@ -122,8 +135,23 @@ namespace Code.Scripts.View
         {
             foreach (var device in Gateway.ListDevices)
             {
-                // If there is no button with the name holding the address the device, create a button
-                if (!pairedDevices.transform.Find(device.Address) && !availableDevices.transform.Find(device.Address))
+                var hasPairedDevice = pairedDevices.transform.Find(device.Address);
+                var hasAvailableDevice = availableDevices.transform.Find(device.Address);
+                
+                // If device has a button with same address but is not present in the right panel, destroy it
+                // and create a new one in the right panel
+                if (hasPairedDevice && !device.IsPaired ||
+                    hasAvailableDevice && device.IsPaired)
+                {
+                    _DestroyBluetoothDeviceButton(pairedDevices, device.Address);
+                    _DestroyBluetoothDeviceButton(availableDevices, device.Address);
+                    _CreateBluetoothDeviceButton(device);
+                }
+                
+                // If device is paired but not present in paired panel or if device is available but not present 
+                // in available panel, create a button
+                else if (device.IsPaired && !hasPairedDevice ||
+                    !device.IsPaired && !hasAvailableDevice)
                     _CreateBluetoothDeviceButton(device);
             }
             

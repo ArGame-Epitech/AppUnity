@@ -33,14 +33,26 @@ namespace Code.Scripts.Domain
         /// <summary>
         /// Connects to a device through its address. It plugs a gatt callback to the device.
         /// </summary>
-        /// <param name="deviceAddress"></param>
+        /// <param name="deviceAddress">Address of the device to connect with</param>
         void ConnectToDevice(string deviceAddress);
+        
+        /// <summary>
+        /// Pair to a device through its address.
+        /// </summary>
+        /// <param name="deviceAddress">Address of the device to pair with</param>
+        void PairToDevice(string deviceAddress);
         
         /// <summary>
         /// Handles the discovery of a Bluetooth device.
         /// </summary>
         /// <param name="deviceInfo">Information about the discovered device, generally split by a char.</param>
         void HandleDeviceDiscovered(string deviceInfo);
+        
+        /// <summary>
+        /// Handles the pairing to a device.
+        /// </summary>
+        /// <param name="deviceInfo">Information about the discovered device, generally split by a char.</param>
+        void HandleDeviceBonded(string deviceInfo);
         
         /// <summary>
         /// Destroys the gateway by closing the gatt connection and killing the gateway.

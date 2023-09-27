@@ -17,7 +17,14 @@ namespace Code.Scripts
         
         private void _OnDeviceButtonClicked()
         {
-            Gateway.ConnectToDevice(BluetoothDeviceData.Address);
+            if (BluetoothDeviceData.IsPaired)
+            {
+                Gateway.ConnectToDevice(BluetoothDeviceData.Address);
+            }
+            else
+            {
+                Gateway.PairToDevice(BluetoothDeviceData.Address);   
+            }
         }
     }
 }
